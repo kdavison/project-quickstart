@@ -62,7 +62,7 @@ public:
   {
     decltype(_events) events = std::move(_events);
     _events.reserve(events.size());
-    for(const auto& event : _events)
+    for(const auto& event : events)
     {
       event();
     }
