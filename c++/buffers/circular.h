@@ -12,68 +12,39 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #pragma once
 
-//  Simple Ring (circular) buffer implementaton
-//    adds some wrapping functions to a std::array<X,Y>.
-//    uses two queues (read/write) to track writable/readable space
-//  Note:
-//    probably not the most efficient because of the queues.
-//    The good news it will only take up sizeof(X)*Y + sizeof(std::array<X,Y>::iterator)*Y space.
-//    There may be more efficient ways to do this.
-//    honestly, I chose this implemtnation because its really really simple.
+//  this structure is very efficient, should be move-able.
+//   put it on stack, heap whatever.
+//   probably a decent method to create an object-pool
 
 #include <array>
-#include <queue>
-#include <algorithm>
 
 namespace BUFFER
 {
 template<typename T, std::size_t N>
 class circular
-  : public std::array<T, N>
+  : public std::array<T,N>
 {
+  using iterator_t = typename std::array<T,N>::iterator;
 public:
-  circular() {
-    _init();
+  void push(T&& input) {
+    if(_current != this->end()) {
+      (*_current++) = std::move(input);
+    }
   }
 
-  template<typename... ARGS>
-  circular(ARGS&&... args)
-    : std::array<T,N>{{std::forward<ARGS>(args)...}}
-  {
-    _init();
-  }
-
-  bool push(T&& input) {
-    if(!_write.empty()) {
-      (*_write.front()) = std::move(input);
-      _read.push(_write.front());
-      _write.pop();
+  bool pop(T &result) {
+    if(_current != this->begin()) {
+      result = std::move(*this->begin());
+      --_current;
+      for(iterator_t i = this->begin()+1, t = this->begin(); i != _current; ++i, ++t) {
+        (t) = std::move(i);
+      }
       return true;
     }
     return false;
   }
-
-  bool pop(T &output) {
-    if(!_read.empty()) {
-      output = std::move(*_read.front());
-      _write.push(_read.front());
-      _read.pop();
-      return true;
-    }
-    return false;
-  }
-
 
 private:
-  using array_t = typename std::array<T,N>;
-  using iterator_t = typename array_t::iterator;
-
-  inline void _init() {
-    for(auto iterator = this->begin(); iterator != this->end(); ++iterator) {
-      _write.push(iterator);
-    }
-  }
-
-  std::queue<iterator_t> _write, _read;
+  iterator_t _current=this->begin();
 };
 }  //::BUFFER::
