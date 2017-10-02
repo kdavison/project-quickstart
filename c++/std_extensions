@@ -1,0 +1,58 @@
+#pragma once
+
+#include <type_traits>
+
+namespace ext
+{
+/// are_unique
+namespace detail
+{
+template<typename... T>
+struct are_unique_impl
+  : std::false_type
+{
+static_assert(sizeof...(T), "error: wrong number of template arguments (0, need at least 1)");
+};
+
+template<typename A>
+struct are_unique_impl<A> : std::true_type {};
+
+template<typename A, typename B, typename... T>
+struct are_unique_impl<A,B,T...>
+  : std::integral_constant<bool, !std::is_same<A,B>::value && are_unique_impl<A,T...>::value && are_unique_impl<B,T...>::value>
+{
+};
+}
+
+template<typename... T>
+struct are_unique
+  : std::integral_constant<bool, detail::are_unique_impl<T...>::value>
+{
+};
+
+//are_pod
+namespace detail
+{
+template<typename... T>
+struct are_pod_impl
+  : std::false_type
+{
+static_assert(sizeof...(T) == 1, "error: wrong number of template arguments (0, should be 1)");
+};
+
+template<typename T>
+struct are_pod_impl<T> : std::is_pod<T> {};
+
+template<typename A, typename... T>
+struct are_pod_impl<A, T...>
+  : std::integral_constant<bool, std::is_pod<A>::value && are_pod_impl<T...>::value>
+{
+};
+}
+
+template<typename... T>
+struct are_pod
+  : std::integral_constant<bool, detail::are_pod_impl<T...>::value>
+{
+};
+}
