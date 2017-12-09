@@ -47,10 +47,22 @@ public:
   }
 
   template<class T, class... ARGS>
-  int32_t run(ARGS... args) {
+  int32_t run(ARGS&&... args) {
     static_assert(std::is_base_of<iContext, T>::value, "Application Context must derive from iContext!");
+    T context(std::forward<ARGS>(args)...);
+    __run(context);
+  }
+
+  template<class T>
+  int32_t run() {
+    static_assert(std::is_base_of<iContext, T>::value, "Application Context must derive from iContext!");
+    T context;
+    __run(context);
+  }
+
+private:
+  int32_t __run(iContext& _context) {
     try {
-      T _context(std::forward<ARGS>(args)...);
       while(_context.is_running()) {
         _time = {clock::now(), _time[eState::CURRENT]};
         _context.begin(_global, _time[eState::CURRENT] - _time[eState::PREVIOUS]);
@@ -72,10 +84,10 @@ public:
     return 0;
   }
 
-private:
   time_point_t _global;
   nanoseconds_t _accumulator, _timestep;
   std::array<time_point_t, eState::COUNT> _time;
 };
 }  //::Application::
+
 
